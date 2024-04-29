@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
@@ -26,20 +27,41 @@ class ClassScreenState extends ConsumerState<ClassScreen> {
 
   AudioPlayer? player;
   PlayerState playerState = PlayerState.paused;
+  bool isChanging = false;
+  List<String> labels = [
+    "What A Wonderful World - Louis Armstrong",
+    "Shape Of You - Ed Sheeran",
+    "Smells Like A Teen Spirit - Nirvana",
+    "Lloraras - Oscar D'Leon",
+    "The Wipe - Teste",
+  ];
 
   setPlayer(name) async{
+    if (isChanging) {
+      try {
+        await player?.setSource(AssetSource('sounds/${name}.mp3'));
+        setState(() {
+          playerState = PlayerState.playing;
+          player?.resume();
+          isChanging = false;
+        });
+      } catch (e) {
+        player?.pause();
+        // player?.dispose();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
     player?.dispose();
-    player = AudioPlayer();
-    player?.setReleaseMode(ReleaseMode.stop);
-    await player?.setSource(AssetSource('sounds/${name}.mp3'));
-    playerState = PlayerState.playing;
-    player?.resume();
-    setState(() {
-    });
+    super.dispose();
   }
   
   @override
   void initState() {
+    player = AudioPlayer();
+    player?.setReleaseMode(ReleaseMode.stop);
     super.initState();
   }
 
@@ -63,8 +85,6 @@ class ClassScreenState extends ConsumerState<ClassScreen> {
       default:
         if(player != null){
           player?.pause();
-          player?.dispose();
-          player = null;
           setState(() {
           });
         }
@@ -92,6 +112,7 @@ class ClassScreenState extends ConsumerState<ClassScreen> {
   @override
   Widget build(BuildContext context) {
     final classProv = ref.watch(classProvider);
+    final isLoading = ref.watch(bluetoothStateProvider);
     AppColor appColor = ref.watch(appColorProvider);
     return Scaffold(
       // backgroundColor: appColor.primary,
@@ -108,29 +129,55 @@ class ClassScreenState extends ConsumerState<ClassScreen> {
             child: Text(classProv.when(data: (data) => getName(data), error: (error, stackTrace) => "Error", loading: ()=>"Cargando"),
             style: TextStyle(color: appColor.getContrastColor(), fontSize: 40, fontWeight: FontWeight.bold))
           ),
-          SizedBox(height: 10),
-          Center(
+          classProv.value != null && classProv.value != 6?Center(
+            child: Text(labels[(classProv.value??1)-1], style: TextStyle(color: Colors.white.withOpacity(0.7)),),
+          ):const SizedBox.shrink(),
+          SizedBox(height: 100),
+          classProv.value != null && classProv.value != 6?Center(
+            child: IconButton(onPressed: () async{
+              if(playerState == PlayerState.playing){
+                await player?.pause();
+                playerState = PlayerState.paused;
+              }else{
+                await player?.resume();
+                playerState = PlayerState.playing;
+              }
+              setState(() {
+              });
+          }, icon: Icon(playerState == PlayerState.playing? Icons.pause:Icons.play_arrow, color: Colors.white, size: 100)),
+          ):const SizedBox.shrink(),
+          SizedBox(height: 200), 
+          !isLoading?Center(
+            child: InkWell(
+              child: Container(
+                padding: EdgeInsets.all(15),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(15),
+                  color: appColor.getContrastColor()
+                ),
+                child: Text("Escanear", style: TextStyle(color: appColor.secondary, fontSize: 20, fontWeight: FontWeight.bold)),
+              ),
+              onTap: (){
+                player?.pause();
+                ref.read(bluetoothDeviceProvider.notifier).writeCharacteristcs();
+                setState(() {
+                  isChanging = true;
+                });
+              },
+            ),
+          ):Center(
             child: classProv.when(data: (data) => Icon(getIcon(data),
             color: appColor.getContrastColor(),
             size: 120),error: (error, stackTrace) => SizedBox.shrink(),
             loading: () => CircularProgressIndicator(color: appColor.getContrastColor())),
           ),
-          SizedBox(height: 200),
-          player != null?Center(
-            child: IconButton(onPressed: () async{
-              if(playerState == PlayerState.playing){
-                player?.pause();
-              }else{
-                player?.resume();
-              }
-          }, icon: Icon(playerState == PlayerState.playing? Icons.pause:Icons.play_arrow, color: Colors.white,)),
-          ):SizedBox.shrink(),
+          SizedBox(height: 20),
           Center(
             child: InkWell(
               child: Container(
-                padding: EdgeInsets.all(10),
+                padding: EdgeInsets.all(15),
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(15),
                   color: appColor.getContrastColor()
                 ),
                 child: Text("Volver", style: TextStyle(color: appColor.secondary, fontSize: 20, fontWeight: FontWeight.bold)),

@@ -40,8 +40,7 @@ class BluetoothDeviceController extends StateNotifier<AsyncValue<BluetoothDevice
   // FlutterBlue flutterBlue = FlutterBlue.instance;
 
   Future<void> updateProviders() async {
-    // await ref.read(recordsPersonControllerProvider.notifier).getAllRecords();
-    // await ref.read(recordsGroupControllerProvider.notifier).getAllRecords();
+
   }
 
   Future<void> handleConnection(BluetoothDevice device) async{
@@ -64,28 +63,53 @@ class BluetoothDeviceController extends StateNotifier<AsyncValue<BluetoothDevice
 
 
   Future<void> readCharacteristcs() async{
-    _discoveryTimer = Timer.periodic(Duration(seconds: 5), (Timer t) async {
     if(state.hasValue){
       var device = state.value;
-      ref.read(classProvider.notifier).setLoading();
       if(device != null){
         try {
           List<BluetoothService> services = await device.discoverServices();
-        services.forEach((service) async {
-            var chars = service.characteristics;
-            for (var char in chars) {
-               if (char.uuid.toString().toUpperCase().contains("2A57")){
-                var value = await char.read();
-                log(value.toString());
-                ref.read(classProvider.notifier).setValue(value.first);
-               }
+          final service = services.where((service) => service.serviceUuid == Guid('180A')).toList();
+          if (service.isNotEmpty) {
+            final characteristic = service.first.characteristics.where((charc) => charc.characteristicUuid == Guid('2A57'));
+            if (characteristic.isNotEmpty) {
+              var value = await characteristic.first.read();
+              ref.read(classProvider.notifier).setValue(value.first);
+              ref.read(bluetoothStateProvider.notifier).state = false;
             }
-        });
+          }
         } catch (e) {
           await device.disconnect();
           state = AsyncData(null);
         }
       }
-  }});
+    }
+  }
+
+  Future<void> writeCharacteristcs() async{
+    if(state.hasValue){
+      var device = state.value;
+      ref.read(bluetoothStateProvider.notifier).state = true;
+      ref.read(classProvider.notifier).setLoading();
+      if(device != null){
+        try {
+          List<BluetoothService> services = await device.discoverServices();
+          final service = services.where((service) => service.serviceUuid == Guid('180A')).toList();
+          if (service.isNotEmpty) {
+            final characteristic = service.first.characteristics.where((charc) => charc.characteristicUuid == Guid('2A58'));
+            if (characteristic.isNotEmpty) {
+              await characteristic.first.write([1]);
+              await Future.delayed(Duration(seconds: 5));
+              await readCharacteristcs();
+              await characteristic.first.write([0]);
+            }
+          }
+        } catch (e) {
+          await device.disconnect();
+          state = AsyncData(null);
+        }
+      }
+  }
   }
 }
+
+final bluetoothStateProvider = StateProvider<bool>((ref) => false);

@@ -120,7 +120,6 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
           child: Text("Probar", style: TextStyle(color: Colors.white,
           fontWeight: FontWeight.bold, fontSize: 20),)),
         onTap: (){
-          ref.read(bluetoothDeviceProvider.notifier).readCharacteristcs();
           Navigator.of(context).pushNamed(ClassScreen.routeName);
         },
       ):SizedBox.shrink(),

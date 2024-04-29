@@ -17,22 +17,22 @@ class ClassProviderController extends StateNotifier<AsyncValue<int>>{
     state = AsyncData(v);
     switch(v){
       case 1: //Ayudar
-        appColor.setColor(Colors.yellow);
+        appColor.setColor(Color.fromARGB(255, 161, 110, 0));
         break;
       case 2: //Medico
-        appColor.setColor(Colors.blue);
+        appColor.setColor(const Color.fromARGB(255, 15, 95, 160));
         break;
       case 3: //Peligroso
-        appColor.setColor(Colors.red);
+        appColor.setColor(Color.fromARGB(255, 129, 13, 5));
         break;
       case 4: //Policia
-        appColor.setColor(Colors.green);
+        appColor.setColor(const Color.fromARGB(255, 20, 105, 23));
         break;
       case 5: //Salir
-        appColor.setColor(Colors.purple);
+        appColor.setColor(const Color.fromARGB(255, 87, 13, 100));
         break;
       case 6: //Sin Reconocer
-        appColor.setColor(Colors.white);
+        appColor.setColor(Color.fromARGB(255, 255, 255, 255));
         break;
     }
     
